@@ -11,7 +11,7 @@ import (
 func main() {
 
     const filepathRoot = "./app"
-    const port = "3000"
+    const port = "8000"
 
     fs := http.FileServer(http.Dir(filepathRoot))
     // Use the http.NewServeMux() function to create an empty servemux
