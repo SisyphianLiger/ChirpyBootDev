@@ -29,8 +29,16 @@ func (cfg *ApiConfig) MiddlewareMetricsInc(next http.Handler) http.Handler {
 func (cfg *ApiConfig) HitHandler( w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
     w.WriteHeader(http.StatusOK)
-    hitCount := fmt.Sprintf("Hits: %d", cfg.fileserverHits)
-	w.Write([]byte(hitCount))
+    count := cfg.fileserverHits
+    html := fmt.Sprintf(`
+    <html>
+    <body>
+        <h1>Welcome, Chirpy Admin</h1>
+        <p>Chirpy has been visited %d times!</p>
+    </body>
+    </html>
+    `, count) // count value will replace %d	w.Write([]byte(html)
+	w.Write([]byte(html))
 }
 
 func (cfg *ApiConfig) ResetHandler ( w http.ResponseWriter, r *http.Request) {
