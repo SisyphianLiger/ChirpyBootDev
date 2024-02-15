@@ -7,8 +7,14 @@ import (
 	"strings"
 )
 
+// Generated Data from Chirp
+type Chirp struct {
+    Body string `json:"cleaned_body"`
+    id int `json:"id"`
+}
 
-func filter_post(body string) string {
+
+func Filter_Post(body string) string {
 
     filter := strings.Split(body, " ")
     for i,word := range filter {
@@ -20,7 +26,9 @@ func filter_post(body string) string {
     return strings.Join(filter, " ")
 }
 
-func Is_Chirpable(w http.ResponseWriter, r *http.Request){
+
+
+func Valid_Post_Chirp(w http.ResponseWriter, r *http.Request){
     
     // Decoded Body inc
     type Request struct {
@@ -42,10 +50,10 @@ func Is_Chirpable(w http.ResponseWriter, r *http.Request){
 
     // From this point 
     // Want to put response to body
-
     type ErrorResp struct {
         ErrorResp string `json:"error"`
     }
+
     // Check Length
     if len(requests.Body) > 140 {
         err := ErrorResp{ErrorResp: "Chirp is too long"}
@@ -56,16 +64,22 @@ func Is_Chirpable(w http.ResponseWriter, r *http.Request){
         return
     }
 
-    // Cursed Case 
-    body := filter_post(requests.Body)
-        type CursedResponse struct {
-            Cursed string `json:"cleaned_body"`
-        }
 
-        cResp := CursedResponse{Cursed: body}
+    // Cursed Case 
+    body := Filter_Post(requests.Body)
+    // Gotta fix dis
+    cResp := Chirp{Body: body, id: 0}
         respJaysawn, _ := json.Marshal(cResp)
 
         w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(200)
+        w.WriteHeader(201)
         w.Write(respJaysawn)
+
 }
+
+
+
+
+
+
+
