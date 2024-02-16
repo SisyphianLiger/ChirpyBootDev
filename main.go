@@ -31,8 +31,10 @@ func main() {
     // Ensuring only Get requests for /metrics and what not
     apiR.Get("/reset", apiCfg.ResetHandler)
     apiR.Get("/healthz", api.HealthzHandler)
-    apiR.Post("/chirps", api.Valid_Post_Chirp)
-    apiR.Get("/chirps", api.Get_Chirp)
+
+    dbrequester,_ := api.NewDB("database.json")
+    apiR.Post("/chirps", dbrequester.CreateChirp)
+    apiR.Get("/chirps", dbrequester.GetChirp)
 
     
     // Mounting API to router
