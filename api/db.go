@@ -3,11 +3,12 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
+	"sort"
+	"strings"
 	"sync"
-    "strings" 
-    "net/http"
 )
 
 // Used to lock DB when accessing
@@ -23,10 +24,14 @@ type DBStructure struct {
 
 // Generated Data from Chirp
 type Chirp struct {
-    Body string `json:"cleaned_body"`
-    id int `json:"id"`
+    Body string `json:"body"`
+    ID int `json:"id"`
 }
 
+// Decoded Body inc
+type Request struct {
+    Body string `json:"body"`
+}
 
 func Filter_Post(body string) string {
 
@@ -42,123 +47,84 @@ func Filter_Post(body string) string {
 
 
 
-func (db *DBrequester) CreateChirp(w http.ResponseWriter, r *http.Request){
-   
-
-    // Decoded Body inc
-    type Request struct {
-        Body string `json:"body"`
-    }
-
-    // We want to process the incoming body 
-    decoder := json.NewDecoder(r.Body)
-
-    requests := Request{}
-    err := decoder.Decode(&requests)
-   
-    if err != nil {
-        log.Printf("Error decoding parameters: %s", err)
-        w.WriteHeader(500)
-        return
-    }
-
-
-    // From this point 
-    // Want to put response to body
-    type ErrorResp struct {
-        ErrorResp string `json:"error"`
-    }
-
+func (db *DBrequester) CreateChirp(body string) (Chirp, error){
+  
     // Check Length
-    if len(requests.Body) > 140 {
-        err := ErrorResp{ErrorResp: "Chirp is too long"}
-        errJson, _ := json.Marshal(err)
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(400) 
-        w.Write(errJson)
-        return
+    if len(body) > 140 {
+        log.Printf("Error: body is to long to post")
+        return Chirp{}, fmt.Errorf("Error: body is two long to post")
     }
-
-
     // Cursed Case 
-    body := Filter_Post(requests.Body)
+    postBody := Filter_Post(body)
 
-    // so load db now I guess?
-
-    dbToMem := DBStructure{}
-    if db.ensureDB() != nil {
-        db.mux.Lock()
-        NewDB(db.path)
-        // Insert a new dbToMem here 
-        newChirp := Chirp{Body:body, id:0} 
-        dbToMem.Chirps[newChirp.id] = newChirp
-        db.writeDB(dbToMem) 
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(201)
-        w.Write([]byte(body))
-        db.mux.Unlock()
-    } else {
-        // Count 
-        db.mux.Lock()
-        dbToMem ,err = db.loadDB()
-        cnt := len(dbToMem.Chirps)
-        input := DBStructure{}
-        newChirp := Chirp{Body:body, id:cnt}
-        input.Chirps[cnt+1] = newChirp
-        db.writeDB(input)
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(201)
-        w.Write([]byte(body))
-        db.mux.Unlock()
+    err := db.ensureDB()
+   
+    newChirp := Chirp{
+        ID: 0,
+        Body: postBody,
     }
+    
+    if err != nil {
+        _, err := NewDB(db.path)     
+        if err != nil {
+            log.Printf("Something went wrong creating the DB check path string")
+            return Chirp{}, nil
+        }
+        dbToMem, _ := db.loadDB()
+        dbToMem.Chirps[0] = newChirp
+        err = db.writeDB(dbToMem)
+        if err != nil {
+            log.Printf("Failed to Write to DB, path may be corrupt")
+            return Chirp{}, err
+        }
+        return Chirp{}, err
+    }
+
+    dbToMem, _ := db.loadDB()
+    nextAdd := len(dbToMem.Chirps) + 1
+    newChirp.ID = nextAdd
+    dbToMem.Chirps[nextAdd] = newChirp
+    resp := dbToMem.Chirps[nextAdd] 
+    err = db.writeDB(dbToMem)
+    if err != nil {
+        log.Printf("Cannot put struct into db check Chirp body")
+        return Chirp{}, err
+    }
+    return resp, nil
 }
 
 
-func (db *DBrequester) GetChirp(w http.ResponseWriter, r *http.Request){
-    
-    // Decoded Body inc
-    type Request struct {
-        Body string `json:"body"`
-    }
+func (db *DBrequester) GetChirp() ([]Chirp, error){
+  
+    err := db.ensureDB()
 
-    // We want to process the incoming body 
-    decoder := json.NewDecoder(r.Body)
-
-    requests := Request{}
-    err := decoder.Decode(&requests)
-   
     if err != nil {
-        log.Printf("Error decoding parameters: %s", err)
-        w.WriteHeader(500)
-        return
+        log.Printf("No DB Found")
+        return []Chirp{}, err
     }
 
+    dbToMem, err :=  db.loadDB()
+    if err != nil {
+        log.Printf("DB not loaded successfully")
+        return []Chirp{}, err
+    }
+   
+   
+    // Need an array here sorted, 
+    // Need to return an array 
+    var dbresp []Chirp
 
-    // From this point 
-    // Want to put response to body
-    type ErrorResp struct {
-        ErrorResp string `json:"error"`
+    fmt.Print(dbToMem.Chirps)
+
+    for _, chirp := range dbToMem.Chirps {
+        dbresp = append(dbresp, chirp)
     }
 
-    // Check Length
-    if len(requests.Body) > 140 {
-        err := ErrorResp{ErrorResp: "Chirp is too long"}
-        errJson, _ := json.Marshal(err)
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(400) 
-        w.Write(errJson)
-        return
-    }
+    sort.Slice(dbresp, func(i, j int) bool {
+        return dbresp[i].ID < dbresp[j].ID
+    })
 
-
-    // Cursed Case 
-    body := Filter_Post(requests.Body)
-    cResp := Chirp{Body: body, id: 0}
-        respJaysawn, _ := json.Marshal(cResp)
-
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(201)
-        w.Write(respJaysawn)
+    return dbresp, nil
 
 }
 
@@ -170,7 +136,21 @@ func NewDB(path string) (*DBrequester, error) {
 
     // Now there is an error which means we make the db and start the struct
     if err != nil { 
-        os.WriteFile(path, []byte{}, 0600)
+        initialDB := DBStructure{
+            Chirps: make(map[int]Chirp), 
+        }
+
+        jsonData, err := json.Marshal(initialDB)
+
+        if err != nil {
+            log.Println("Failed to marshal initial DB Structure")
+            return nil, err 
+        }
+
+        err = os.WriteFile(path, jsonData, 0600)
+        if err != nil {
+            log.Printf("Could not create database, please check path")
+        }
         req := DBrequester{path:path, mux:&sync.RWMutex{}}
         return &req, err
     }
@@ -221,8 +201,12 @@ func (db *DBrequester) ensureDB() error {
 // writeDB writes the database file to disk
 func (db *DBrequester) writeDB(dbStructure DBStructure) error {
     sendingBody, err := json.Marshal(&dbStructure)
+    if err != nil {
+        log.Println(err)
+        return err 
+    }
 
-    os.WriteFile(db.path, sendingBody, 0600) 
+    err = os.WriteFile(db.path, sendingBody, 0600) 
     if err != nil {
         log.Println(err)
         return err 

@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	// Using dot convention to becasue of clear Handler names
 	"github.com/SisyphianLiger/Chirpy/api"
@@ -16,6 +17,7 @@ func main() {
     const port = "8080"
 
     fs := http.FileServer(http.Dir(filepathRoot))
+    os.Remove("database.json")
     
     // Creating a empty struct to track state of Handler
     apiCfg := &api.ApiConfig{}
@@ -33,8 +35,8 @@ func main() {
     apiR.Get("/healthz", api.HealthzHandler)
 
     dbrequester,_ := api.NewDB("database.json")
-    apiR.Post("/chirps", dbrequester.CreateChirp)
-    apiR.Get("/chirps", dbrequester.GetChirp)
+    apiR.Post("/chirps", dbrequester.PostChirps)
+    apiR.Get("/chirps", dbrequester.GetChirps)
 
     
     // Mounting API to router
