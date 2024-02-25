@@ -128,6 +128,45 @@ func (db *DBrequester) GetChirp() ([]Chirp, error){
 
 }
 
+
+func (db *DBrequester) GetChirpID(id int) (Chirp, error){
+  
+    err := db.ensureDB()
+
+    if err != nil {
+        log.Printf("No DB Found")
+        return Chirp{}, err
+    }
+
+    dbToMem, err :=  db.loadDB()
+    if err != nil {
+        log.Printf("DB not loaded successfully")
+        return Chirp{}, err
+    }
+   
+   
+    // Need an array here sorted, 
+    // Need to return an array 
+    var chirpFromid Chirp
+
+    for _, chirp := range dbToMem.Chirps {
+        fmt.Printf("Current Chirp id %v\n", chirp.ID)
+        if chirp.ID == id {
+            chirpFromid = chirp
+            break
+        }
+    }
+
+    if chirpFromid.ID != id {
+        return Chirp{}, fmt.Errorf("Chirp with ID %v not found", id)
+    }
+
+    return chirpFromid, nil
+
+}
+
+
+
 // Generates a new DB is no DB is made
 func NewDB(path string) (*DBrequester, error) {
 
@@ -214,7 +253,30 @@ func (db *DBrequester) writeDB(dbStructure DBStructure) error {
         return nil
 }
 
+func (db *DBrequester) DeleteDB() error{
+    
+    err := db.ensureDB()
+    if err != nil {
+        return err
+    }
+    
+    err = os.Remove(db.path)
+    if err != nil {
+        log.Printf("Error removing db check path")
+        return err
+    }
+    
+    var newDB DBStructure
+    err = db.writeDB(newDB)
 
+    if err != nil {
+        log.Printf("Could not create the db try running writeDB again")
+        return err
+    }
+    
+    return nil
+
+}
 
 
 

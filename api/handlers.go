@@ -2,7 +2,11 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 )
 
 
@@ -12,7 +16,36 @@ func HealthzHandler( w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
 
-func (db *DBrequester) GetChirps(w http.ResponseWriter, r *http.Request) {
+func (db *DBrequester) HandleGetID(w http.ResponseWriter, r *http.Request) {
+    
+
+    idStr := chi.URLParam(r, "chirpID")
+    ID, err := strconv.Atoi(idStr)
+
+    if err != nil {
+        log.Printf("Invalid ID in URL")
+        w.WriteHeader(404)
+        w.Header().Set("Content-Type", "application/json")
+        return 
+    }
+
+    chirp, err := db.GetChirpID(ID)
+   
+    if err != nil {
+        log.Printf("ID Does not exist")
+        w.WriteHeader(404)
+        w.Header().Set("Content-Type", "application/json")
+        return
+    }        
+
+
+    w.WriteHeader(200)
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(chirp) 
+}
+
+
+func (db *DBrequester) HandleGetAllChirps(w http.ResponseWriter, r *http.Request) {
     dbresp, err := db.GetChirp()
 
     if err != nil {
@@ -25,7 +58,7 @@ func (db *DBrequester) GetChirps(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-func (db *DBrequester) PostChirps( w http.ResponseWriter, r *http.Request) {
+func (db *DBrequester) HandlePostChirp( w http.ResponseWriter, r *http.Request) {
           
     var req Request
     dec := json.NewDecoder(r.Body)

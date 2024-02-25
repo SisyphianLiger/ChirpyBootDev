@@ -12,7 +12,7 @@ import (
 
 
 func main() {
-
+    
     const filepathRoot = "./app"
     const port = "8080"
 
@@ -34,9 +34,12 @@ func main() {
     apiR.Get("/reset", apiCfg.ResetHandler)
     apiR.Get("/healthz", api.HealthzHandler)
 
+    // REMOVE LATER: Just for testing
+
     dbrequester,_ := api.NewDB("database.json")
-    apiR.Post("/chirps", dbrequester.PostChirps)
-    apiR.Get("/chirps", dbrequester.GetChirps)
+    apiR.Post("/chirps", dbrequester.HandlePostChirp)
+    apiR.Get("/chirps", dbrequester.HandleGetAllChirps)
+    apiR.Get("/chirps/{chirpID}", dbrequester.HandleGetID)
 
     
     // Mounting API to router
@@ -57,5 +60,6 @@ func main() {
 
     log.Printf("Serving files from %s on port localhost:%s\n", filepathRoot, port)
 	log.Fatal(srv.ListenAndServe())
+    dbrequester.DeleteDB()
 }
 
