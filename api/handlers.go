@@ -10,11 +10,21 @@ import (
 )
 
 
+type LoginRequest struct {
+    Email string `json:"email"`
+    Password string `json:"password"`
+}
+
 func HealthzHandler( w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
     w.WriteHeader(http.StatusOK)
-	w.Write([]byte(http.StatusText(http.StatusOK)))
+    _, err := w.Write([]byte(http.StatusText(http.StatusOK)))
+    if err != nil {
+        log.Print(err)
+        return 
+    }
 }
+
 
 func (db *DBrequester) HandleGetID(w http.ResponseWriter, r *http.Request) {
     
@@ -41,7 +51,11 @@ func (db *DBrequester) HandleGetID(w http.ResponseWriter, r *http.Request) {
 
     w.WriteHeader(200)
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(chirp) 
+
+    err = json.NewEncoder(w).Encode(chirp) 
+    if err != nil {
+        return
+    }
 }
 
 
@@ -54,12 +68,15 @@ func (db *DBrequester) HandleGetAllChirps(w http.ResponseWriter, r *http.Request
     } else {
         w.WriteHeader(200)
         w.Header().Set("Content-Type", "application/json")
-        json.NewEncoder(w).Encode(dbresp)
+        err = json.NewEncoder(w).Encode(dbresp)
+        if err != nil {
+            return
+        }
     }
 }
 
 func (db *DBrequester) HandlePostChirp( w http.ResponseWriter, r *http.Request) {
-          
+    
     var req Request
     dec := json.NewDecoder(r.Body)
     err := dec.Decode(&req)
@@ -81,9 +98,71 @@ func (db *DBrequester) HandlePostChirp( w http.ResponseWriter, r *http.Request) 
 
     w.WriteHeader(201)
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(newChirp)
+    err = json.NewEncoder(w).Encode(newChirp)
+    if err != nil {
+        return
+    }
 
+}
+
+
+func (db *DBrequester) HandlePostUser( w http.ResponseWriter, r *http.Request) {
+
+    var req LoginRequest 
+    dec := json.NewDecoder(r.Body)
+
+    err := dec.Decode(&req)
+   
+    if err != nil {
+        w.WriteHeader(400)
+        w.Header().Set("Content-Type", "application/json")
+        return
+    }        
+
+    // Here is where we need a nother way to handle 
+    createUser, err := db.CreateUser(req.Email, req.Password)
+
+    if err != nil {
+        w.WriteHeader(400)
+        w.Header().Set("Content-Type", "application/json")
+        return
+    }        
+
+
+    w.WriteHeader(201)
+    w.Header().Set("Content-Type", "application/json")
+    err = json.NewEncoder(w).Encode(createUser)
+    if err != nil {
+        return
+    }
     
+}
+
+func (db *DBrequester) HandlePostLogin( w http.ResponseWriter, r *http.Request) {
+    var req LoginRequest 
+    dec := json.NewDecoder(r.Body)
+    err := dec.Decode(&req)
+
+    if err != nil {
+        w.WriteHeader(401)
+        w.Header().Set("Content-Type", "application/json")
+        return
+    }        
+
+    // Here is where we need a nother way to handle 
+    login, err := db.Login(req.Email, req.Password)
+
+    if err != nil {
+        w.WriteHeader(401)
+        w.Header().Set("Content-Type", "application/json")
+        return
+    }        
 
 
+    w.WriteHeader(200)
+    w.Header().Set("Content-Type", "application/json")
+    err = json.NewEncoder(w).Encode(login)
+    if err != nil {
+        return
+    }
 }

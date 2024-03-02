@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+    // "golang.org/x/crypto/bcrypt"
 )
 
 // Used to lock DB when accessing
@@ -20,6 +21,8 @@ type DBrequester struct {
 // Access of DB
 type DBStructure struct {
     Chirps map[int]Chirp `json:"chirps"`
+    Users map[int]UserInfo `json:"email"`
+    Credentials map[int]UserLogin `json:"password"`
 }
 
 // Generated Data from Chirp
@@ -28,6 +31,15 @@ type Chirp struct {
     ID int `json:"id"`
 }
 
+type UserLogin struct {
+    HashedPassword string `json:"password"`
+    Email string `json:"email"`
+}
+
+type UserInfo struct {
+    Email string `json:"email"`
+    ID int `json:"id"`
+}
 // Decoded Body inc
 type Request struct {
     Body string `json:"body"`
@@ -177,6 +189,8 @@ func NewDB(path string) (*DBrequester, error) {
     if err != nil { 
         initialDB := DBStructure{
             Chirps: make(map[int]Chirp), 
+            Users: make(map[int]UserInfo), 
+            Credentials: make(map[int]UserLogin),
         }
 
         jsonData, err := json.Marshal(initialDB)
@@ -254,18 +268,20 @@ func (db *DBrequester) writeDB(dbStructure DBStructure) error {
 }
 
 func (db *DBrequester) DeleteDB() error{
-    
+
     err := db.ensureDB()
+
     if err != nil {
         return err
     }
-    
+
     err = os.Remove(db.path)
+
     if err != nil {
         log.Printf("Error removing db check path")
         return err
     }
-    
+
     var newDB DBStructure
     err = db.writeDB(newDB)
 
@@ -273,10 +289,154 @@ func (db *DBrequester) DeleteDB() error{
         log.Printf("Could not create the db try running writeDB again")
         return err
     }
-    
+
     return nil
 
 }
 
+// Steps --> Make sure we check for duplicat emails
+// Make sure we pass 
+func (db *DBrequester) CreateUser(email string, password string) (UserInfo, error) {
 
+    err := db.ensureDB()
+   
+    if err != nil {
+        log.Print(err)
+        return UserInfo{}, err
+    }
+
+
+    // hashedPw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+   
+    if err != nil {
+        log.Print(err)
+        return UserInfo{}, err
+    }
+   
+
+    userLogin := UserLogin {
+            Email: email,
+            HashedPassword: password,
+    }
+
+    userInfo := UserInfo{
+        Email: email,
+        ID: 0,
+    }
+
+    if err != nil {
+        _, err := NewDB(db.path)     
+        if err != nil {
+            log.Printf("Something went wrong creating the DB check path string")
+            return UserInfo{}, nil
+        }
+
+        dbToMem, _ := db.loadDB()
+
+        err = db.NoRepeatEmails(email, &dbToMem)
+
+        if err != nil {
+            return UserInfo{}, err
+        }
+
+        dbToMem.Users[0] = userInfo
+        dbToMem.Credentials[0] = userLogin
+        err = db.writeDB(dbToMem)
+        if err != nil {
+            log.Printf("Failed to Write to DB, path may be corrupt")
+            return UserInfo{}, err
+        }
+        return UserInfo{}, err
+    }
+
+    dbToMem, _ := db.loadDB()
+    err = db.NoRepeatEmails(email, &dbToMem)
+
+    if err != nil {
+        return UserInfo{}, err
+    }
+
+    nextAdd := len(dbToMem.Users) + 1
+    userInfo.ID = nextAdd
+    dbToMem.Users[nextAdd] = userInfo
+    dbToMem.Credentials[nextAdd] = userLogin
+    resp := dbToMem.Users[nextAdd] 
+    err = db.writeDB(dbToMem)
+    if err != nil {
+        log.Printf("Cannot put struct into db check Chirp body")
+        return UserInfo{}, err
+    }
+    return resp, nil
+}
+
+func (db *DBrequester) NoRepeatEmails(email string, dbToMem *DBStructure) error {
+ 
+    for _, user := range dbToMem.Users {
+        if email == user.Email {
+            return errors.New("Email already in use, please sign up with another email")
+        }
+    }
+    return nil
+}
+
+
+
+func (db *DBrequester) Login(email string, password string) (UserInfo, error){
+     
+    err := db.ensureDB()
+   
+   
+    if err != nil {
+        log.Print(err)
+        return UserInfo{}, err
+    }
+
+    dbToMem, err := db.loadDB()
+
+    if err != nil {
+        log.Printf("Failed to Write to DB, path may be corrupt")
+        return UserInfo{}, err
+    }
+    
+
+
+
+    var user UserInfo 
+    for _, Credentials := range dbToMem.Credentials {
+        log.Printf("Made it to Credentials Check")
+        if Credentials.Email == email {
+            user, err = findEmail(email, &dbToMem) 
+            if err != nil {
+                return UserInfo{}, err
+            }
+            if Credentials.HashedPassword != password {
+                return UserInfo{}, errors.New("passwords do not match")
+            }
+            break
+        }
+    }
+
+    // err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password))
+    
+    
+    if err != nil {
+        log.Print("password does not match login")
+        return UserInfo{}, nil
+    }
+
+   
+    return user, nil
+}
+
+
+func findEmail(email string, dbToMem *DBStructure) (UserInfo, error) {
+
+    for _, userEmail := range dbToMem.Users {
+        if userEmail.Email == email {
+            return userEmail, nil
+        }
+    }
+
+    return UserInfo{}, errors.New("Email Not Found")
+}
 

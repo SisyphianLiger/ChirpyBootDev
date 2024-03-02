@@ -34,16 +34,16 @@ func main() {
     apiR.Get("/reset", apiCfg.ResetHandler)
     apiR.Get("/healthz", api.HealthzHandler)
 
-    // REMOVE LATER: Just for testing
+    // Mounting API to router
+    r.Mount("/api", apiR)
 
     dbrequester,_ := api.NewDB("database.json")
     apiR.Post("/chirps", dbrequester.HandlePostChirp)
     apiR.Get("/chirps", dbrequester.HandleGetAllChirps)
     apiR.Get("/chirps/{chirpID}", dbrequester.HandleGetID)
-
+    apiR.Post("/users", dbrequester.HandlePostUser)
+    apiR.Post("/login", dbrequester.HandlePostLogin)
     
-    // Mounting API to router
-    r.Mount("/api", apiR)
 
     // Mounting admin 
     admin := chi.NewRouter()
@@ -60,6 +60,5 @@ func main() {
 
     log.Printf("Serving files from %s on port localhost:%s\n", filepathRoot, port)
 	log.Fatal(srv.ListenAndServe())
-    dbrequester.DeleteDB()
 }
 
