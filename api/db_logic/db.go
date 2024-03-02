@@ -30,6 +30,11 @@ type Chirp struct {
     ID int `json:"id"`
 }
 
+type UserInfo = struct {
+    ID int 
+    Email string
+}
+
 type UserLogin struct {
     HashedPassword string `json:"password"`
     Email string `json:"email"`
@@ -368,44 +373,45 @@ func (db *DBrequester) NoRepeatEmails(email string, dbToMem *DBStructure) error 
 
 
 
-func (db *DBrequester) Login(email string, password string) (UserLogin, error){
-     
+func (db *DBrequester) Login(email string, password string) (UserInfo, error){
+    
+
     err := db.ensureDB()
    
    
     if err != nil {
         log.Print(err)
-        return UserLogin{}, err
+        return UserInfo{}, err
     }
 
     dbToMem, err := db.loadDB()
 
     if err != nil {
         log.Printf("Failed to Write to DB, path may be corrupt")
-        return UserLogin{}, err
+        return UserInfo{}, err
     }
     
+    
 
-
-    var user UserLogin 
-    for _, Credentials := range dbToMem.Credentials {
+    userInfo := UserInfo{} 
+    for key, Credentials := range dbToMem.Credentials {
         if Credentials.Email == email {
             if Credentials.HashedPassword != password {
-                return UserLogin{}, errors.New("passwords do not match")
+                return UserInfo{}, errors.New("passwords do not match")
             }
+            userInfo.ID = key
+            userInfo.Email = Credentials.Email
             break
         }
     }
-
-    // err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password))
-    
+ 
     
     if err != nil {
         log.Print("password does not match login")
-        return UserLogin{}, nil
+        return UserInfo{}, nil
     }
-
+    
    
-    return user, nil
+    return userInfo, nil
 }
 
