@@ -33,7 +33,7 @@ type UserInfo = struct {
 }
 
 type UserLogin struct {
-    HashedPassword string `json:"password"`
+    HashedPassword []byte `json:"password"`
     Email string `json:"email"`
 }
 

@@ -3,6 +3,8 @@ package db_logic
 import (
     "errors"
     "log"
+	"golang.org/x/crypto/bcrypt"
+
 )
 
 
@@ -18,7 +20,7 @@ func (db *DBrequester) CreateUser(email string, password string) (UserInfo, erro
     }
 
 
-    // hashedPw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+    hashedPw, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
    
     if err != nil {
         log.Print(err)
@@ -28,7 +30,7 @@ func (db *DBrequester) CreateUser(email string, password string) (UserInfo, erro
 
     userLogin := UserLogin {
             Email: email,
-            HashedPassword: password,
+            HashedPassword: hashedPw,
     }
 
 

@@ -1,8 +1,10 @@
 package db_logic
 
 import (
-    "log"
-    "errors"
+	"errors"
+	"log"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func (db *DBrequester) Login(email string, password string) (UserInfo, error){
@@ -28,22 +30,16 @@ func (db *DBrequester) Login(email string, password string) (UserInfo, error){
     userInfo := UserInfo{} 
     for key, Credentials := range dbToMem.Credentials {
         if Credentials.Email == email {
-            if Credentials.HashedPassword != password {
+            if bcrypt.CompareHashAndPassword([]byte(Credentials.HashedPassword), []byte(password)) != nil {
                 return UserInfo{}, errors.New("passwords do not match")
             }
             userInfo.Id = key
             userInfo.Email = Credentials.Email
+            log.Printf("Login Credentials Successful for password %s", password)
             break
         }
     }
-
  
-    
-    if err != nil {
-        log.Print("password does not match login")
-        return UserInfo{}, nil
-    }
-    
    
     return userInfo, nil
 }
