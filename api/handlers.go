@@ -5,10 +5,14 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-
 	"github.com/go-chi/chi/v5"
+    "github.com/SisyphianLiger/Chirpy/api/db_logic"
 )
 
+// Used to access db from db_logic
+type DBreq struct {
+    *db_logic.DBrequester
+}
 
 type LoginRequest struct {
     Email string `json:"email"`
@@ -26,7 +30,7 @@ func HealthzHandler( w http.ResponseWriter, r *http.Request) {
 }
 
 
-func (db *DBrequester) HandleGetID(w http.ResponseWriter, r *http.Request) {
+func (db *DBreq) HandleGetID(w http.ResponseWriter, r *http.Request) {
     
 
     idStr := chi.URLParam(r, "chirpID")
@@ -59,7 +63,7 @@ func (db *DBrequester) HandleGetID(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func (db *DBrequester) HandleGetAllChirps(w http.ResponseWriter, r *http.Request) {
+func (db *DBreq) HandleGetAllChirps(w http.ResponseWriter, r *http.Request) {
     dbresp, err := db.GetChirp()
 
     if err != nil {
@@ -75,9 +79,9 @@ func (db *DBrequester) HandleGetAllChirps(w http.ResponseWriter, r *http.Request
     }
 }
 
-func (db *DBrequester) HandlePostChirp( w http.ResponseWriter, r *http.Request) {
+func (db *DBreq) HandlePostChirp( w http.ResponseWriter, r *http.Request) {
     
-    var req Request
+    var req db_logic.Request
     dec := json.NewDecoder(r.Body)
     err := dec.Decode(&req)
    
@@ -106,7 +110,7 @@ func (db *DBrequester) HandlePostChirp( w http.ResponseWriter, r *http.Request) 
 }
 
 
-func (db *DBrequester) HandlePostUser( w http.ResponseWriter, r *http.Request) {
+func (db *DBreq) HandlePostUser( w http.ResponseWriter, r *http.Request) {
 
     var req LoginRequest 
     dec := json.NewDecoder(r.Body)
@@ -138,7 +142,7 @@ func (db *DBrequester) HandlePostUser( w http.ResponseWriter, r *http.Request) {
     
 }
 
-func (db *DBrequester) HandlePostLogin( w http.ResponseWriter, r *http.Request) {
+func (db *DBreq) HandlePostLogin( w http.ResponseWriter, r *http.Request) {
     var req LoginRequest 
     dec := json.NewDecoder(r.Body)
     err := dec.Decode(&req)

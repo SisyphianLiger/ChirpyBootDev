@@ -31,8 +31,8 @@ type Chirp struct {
 }
 
 type UserInfo = struct {
-    ID int 
-    Email string
+    Email string `json:"email"`
+    Id int `json:"id"`
 }
 
 type UserLogin struct {
@@ -295,13 +295,13 @@ func (db *DBrequester) DeleteDB() error{
 
 // Steps --> Make sure we check for duplicat emails
 // Make sure we pass 
-func (db *DBrequester) CreateUser(email string, password string) (UserLogin, error) {
+func (db *DBrequester) CreateUser(email string, password string) (UserInfo, error) {
 
     err := db.ensureDB()
    
     if err != nil {
         log.Print(err)
-        return UserLogin{}, err
+        return UserInfo{}, err
     }
 
 
@@ -309,7 +309,7 @@ func (db *DBrequester) CreateUser(email string, password string) (UserLogin, err
    
     if err != nil {
         log.Print(err)
-        return UserLogin{}, err
+        return UserInfo{}, err
     }
    
 
@@ -323,7 +323,7 @@ func (db *DBrequester) CreateUser(email string, password string) (UserLogin, err
         _, err := NewDB(db.path)     
         if err != nil {
             log.Printf("Something went wrong creating the DB check path string")
-            return UserLogin{}, nil
+            return UserInfo{}, nil
         }
 
         dbToMem, _ := db.loadDB()
@@ -331,32 +331,33 @@ func (db *DBrequester) CreateUser(email string, password string) (UserLogin, err
         err = db.NoRepeatEmails(email, &dbToMem)
 
         if err != nil {
-            return UserLogin{}, err
+            return UserInfo{}, err
         }
 
         dbToMem.Credentials[0] = userLogin
         err = db.writeDB(dbToMem)
         if err != nil {
             log.Printf("Failed to Write to DB, path may be corrupt")
-            return UserLogin{}, err
+            return UserInfo{}, err
         }
-        return UserLogin{}, err
+        return UserInfo{}, err
     }
 
     dbToMem, _ := db.loadDB()
     err = db.NoRepeatEmails(email, &dbToMem)
 
     if err != nil {
-        return UserLogin{}, err
+        return UserInfo{}, err
     }
 
     nextAdd := len(dbToMem.Credentials) + 1
     dbToMem.Credentials[nextAdd] = userLogin
-    resp := dbToMem.Credentials[nextAdd] 
+    resp := UserInfo{Id:nextAdd, Email: email}
+
     err = db.writeDB(dbToMem)
     if err != nil {
         log.Printf("Cannot put struct into db check Chirp body")
-        return UserLogin{}, err
+        return UserInfo{}, err
     }
     return resp, nil
 }
@@ -399,11 +400,12 @@ func (db *DBrequester) Login(email string, password string) (UserInfo, error){
             if Credentials.HashedPassword != password {
                 return UserInfo{}, errors.New("passwords do not match")
             }
-            userInfo.ID = key
+            userInfo.Id = key
             userInfo.Email = Credentials.Email
             break
         }
     }
+
  
     
     if err != nil {

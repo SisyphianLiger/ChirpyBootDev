@@ -7,6 +7,7 @@ import (
 
 	// Using dot convention to becasue of clear Handler names
 	"github.com/SisyphianLiger/Chirpy/api"
+	"github.com/SisyphianLiger/Chirpy/api/db_logic"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -37,12 +38,13 @@ func main() {
     // Mounting API to router
     r.Mount("/api", apiR)
 
-    dbrequester,_ := api.NewDB("database.json")
-    apiR.Post("/chirps", dbrequester.HandlePostChirp)
-    apiR.Get("/chirps", dbrequester.HandleGetAllChirps)
-    apiR.Get("/chirps/{chirpID}", dbrequester.HandleGetID)
-    apiR.Post("/users", dbrequester.HandlePostUser)
-    apiR.Post("/login", dbrequester.HandlePostLogin)
+    dbrequester,_ := db_logic.NewDB("database.json")
+    localDB := &api.DBreq{dbrequester}
+    apiR.Post("/chirps", localDB.HandlePostChirp)
+    apiR.Get("/chirps", localDB.HandleGetAllChirps)
+    apiR.Get("/chirps/{chirpID}", localDB.HandleGetID)
+    apiR.Post("/users", localDB.HandlePostUser)
+    apiR.Post("/login", localDB.HandlePostLogin)
     
 
     // Mounting admin 
